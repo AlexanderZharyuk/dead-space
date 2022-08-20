@@ -70,14 +70,16 @@ async def animate_spaceship(canvas, frames_of_spaceship):
         row_position += row_direction
         column_position += column_direction
 
-        if row_position <= 0:
-            row_position = 1
-        elif column_position <= 0:
-            column_position = 1
-        elif row_position + frame_height + row_direction > window_height:
-            row_position = window_height - frame_height - border_size
-        elif column_position + frame_width + column_direction > window_width:
-            column_position = window_width - frame_width - border_size
+        row_position = min(
+            window_height - frame_height - border_size,
+            row_position
+        )
+        column_position = min(
+            window_width - frame_width - border_size,
+            column_position
+        )
+        row_position = max(1, row_position)
+        column_position = max(1, column_position)
 
         draw_frame(canvas, row_position, column_position, spaceship_frame)
         previous_frame = spaceship_frame
@@ -195,7 +197,7 @@ def main():
     for frame in range(1, 3):
         with open(f'frames/rocket_frame_{frame}.txt', 'r') as rocket_frame:
             spaceship_frame = rocket_frame.readlines()
-            spaceship_frames.append(''.join(spaceship_frame))
+        spaceship_frames.append(''.join(spaceship_frame))
 
     curses.update_lines_cols()
     curses.wrapper(draw, spaceship_frames)
