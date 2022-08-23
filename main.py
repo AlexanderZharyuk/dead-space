@@ -45,10 +45,9 @@ async def animate_spaceship(canvas, frames_of_spaceship):
     window_height, window_width = window.getmaxyx()
     first_frame_of_spaceship, second_frame_of_spaceship = frames_of_spaceship
 
-    first_animation_frames = list(repeat(first_frame_of_spaceship, 2))
-    second_animation_frames = list(repeat(second_frame_of_spaceship, 2))
-    frames_for_animation_spaceship = first_animation_frames + \
-                                     second_animation_frames
+    first_step_animation = list(repeat(first_frame_of_spaceship, 2))
+    second_step_animation = list(repeat(second_frame_of_spaceship, 2))
+    spaceship_animation = first_step_animation + second_step_animation
 
     frame_size = get_frame_size(first_frame_of_spaceship)
     frame_height, frame_width = frame_size
@@ -59,7 +58,7 @@ async def animate_spaceship(canvas, frames_of_spaceship):
     column_position = window_width // 2 - frame_width // 2
     previous_frame = ''
 
-    for spaceship_frame in cycle(frames_for_animation_spaceship):
+    for spaceship_frame in cycle(spaceship_animation):
         coordinates = read_controls(canvas)
         row_direction, column_direction, space_pressed = coordinates
         draw_frame(canvas, row_position, column_position, previous_frame,
