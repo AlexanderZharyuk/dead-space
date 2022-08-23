@@ -21,31 +21,29 @@ SPACESHIP_SPEED = int(GAME_CONFIG['DEFAULT']['SPACESHIP_SPEED'])
 async def blink(canvas, row, column, symbol='*'):
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for await_number in range(random.randint(0, 20)):
+        for _ in range(random.randint(0, 20)):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for await_number in range(random.randint(0, 3)):
+        for _ in range(random.randint(0, 3)):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for await_number in range(random.randint(0, 5)):
+        for _ in range(random.randint(0, 5)):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for await_number in range(random.randint(0, 3)):
+        for _ in range(random.randint(0, 3)):
             await asyncio.sleep(0)
 
 
 async def animate_spaceship(canvas, frames_of_spaceship):
-
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
     # Подробнее в документации:
     # https://docs.python.org/3/library/curses.html#curses.window.getmaxyx
     window_height, window_width = window.getmaxyx()
-    first_frame_of_spaceship = frames_of_spaceship[0]
-    second_frame_of_spaceship = frames_of_spaceship[1]
+    first_frame_of_spaceship, second_frame_of_spaceship = frames_of_spaceship
 
     first_animation_frames = list(repeat(first_frame_of_spaceship, 2))
     second_animation_frames = list(repeat(second_frame_of_spaceship, 2))
