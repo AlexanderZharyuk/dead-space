@@ -18,22 +18,22 @@ COUNTS_OF_STARS = int(GAME_CONFIG['DEFAULT']['COUNTS_OF_STARS'])
 SPACESHIP_SPEED = int(GAME_CONFIG['DEFAULT']['SPACESHIP_SPEED'])
 
 
-async def blink(canvas, row, column, symbol='*'):
+async def blink(canvas, row, column, offset_tics, symbol='*'):
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for _ in range(random.randint(0, 20)):
+        for _ in range(offset_tics):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(random.randint(0, 3)):
+        for _ in range(3):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for _ in range(random.randint(0, 5)):
+        for _ in range(5):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(random.randint(0, 3)):
+        for _ in range(3):
             await asyncio.sleep(0)
 
 
@@ -171,6 +171,7 @@ def draw(canvas, frames):
         canvas=canvas,
         row=random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
         column=random.randint(star_min_coordinate_by_x, star_max_coordinate_by_x),
+        offset_tics=random.randint(0, 20),
         symbol=random.choice(VARIANTS_OF_STARS)
     ) for star in range(COUNTS_OF_STARS)]
 
