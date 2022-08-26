@@ -56,13 +56,10 @@ async def animate_spaceship(canvas, frames_of_spaceship):
     # Стартовые позиции - изначально это центр игрового поля
     row_position = window_height // 2 - frame_height // 2
     column_position = window_width // 2 - frame_width // 2
-    previous_frame = ''
 
     for spaceship_frame in cycle(spaceship_animation):
         coordinates = read_controls(canvas)
         row_direction, column_direction, space_pressed = coordinates
-        draw_frame(canvas, row_position, column_position, previous_frame,
-                   negative=True)
 
         row_position += row_direction
         column_position += column_direction
@@ -78,10 +75,12 @@ async def animate_spaceship(canvas, frames_of_spaceship):
         row_position = max(1, row_position)
         column_position = max(1, column_position)
 
-        draw_frame(canvas, row_position, column_position, spaceship_frame)
         previous_frame = spaceship_frame
+        draw_frame(canvas, row_position, column_position, previous_frame)
 
         await asyncio.sleep(0)
+        draw_frame(canvas, row_position, column_position, spaceship_frame,
+                   negative=True)
 
 
 def draw_frame(canvas, start_row, start_column, text, negative=False):
@@ -169,10 +168,10 @@ def draw(canvas, frames):
     curses.curs_set(False)
 
     coroutines = [blink(
-        canvas,
-        random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
-        random.randint(star_min_coordinate_by_x, star_max_coordinate_by_x),
-        random.choice(VARIANTS_OF_STARS)
+        canvas=canvas,
+        row=random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
+        column=random.randint(star_min_coordinate_by_x, star_max_coordinate_by_x),
+        symbol=random.choice(VARIANTS_OF_STARS)
     ) for star in range(COUNTS_OF_STARS)]
 
     spaceship_coroutine = animate_spaceship(canvas, frames)
