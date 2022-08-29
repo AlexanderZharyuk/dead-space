@@ -1,8 +1,10 @@
+import asyncio
+import os
+import random
 import time
 import curses
-import asyncio
-import random
 import configparser
+
 from itertools import cycle, repeat
 from functools import partial
 
@@ -189,8 +191,8 @@ def main():
     game_config.read('config.ini')
     spaceship_frames = []
 
-    for frame in range(1, 3):
-        with open(f'frames/rocket_frame_{frame}.txt', 'r') as rocket_frame:
+    for rocket_frame_file in os.listdir("frames"):
+        with open(f"frames/{rocket_frame_file}", 'r') as rocket_frame:
             spaceship_frame = rocket_frame.readlines()
         spaceship_frames.append(''.join(spaceship_frame))
 
