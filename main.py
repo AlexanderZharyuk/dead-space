@@ -2,20 +2,16 @@ import time
 import curses
 import asyncio
 import random
-from itertools import cycle, repeat
 import configparser
+from itertools import cycle, repeat
+from functools import partial
+
 
 SPACE_KEY_CODE = 32
 LEFT_KEY_CODE = 260
 RIGHT_KEY_CODE = 261
 UP_KEY_CODE = 259
 DOWN_KEY_CODE = 258
-
-GAME_CONFIG = configparser.ConfigParser()
-GAME_CONFIG.read('config.ini')
-VARIANTS_OF_STARS = GAME_CONFIG['DEFAULT']['VARIANTS_OF_STARS']
-COUNTS_OF_STARS = int(GAME_CONFIG['DEFAULT']['COUNTS_OF_STARS'])
-SPACESHIP_SPEED = int(GAME_CONFIG['DEFAULT']['SPACESHIP_SPEED'])
 
 
 async def blink(canvas, row, column, offset_tics, symbol='*'):
@@ -37,7 +33,7 @@ async def blink(canvas, row, column, offset_tics, symbol='*'):
             await asyncio.sleep(0)
 
 
-async def animate_spaceship(canvas, frames_of_spaceship):
+async def animate_spaceship(canvas, frames_of_spaceship, game_config):
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
     # Подробнее в документации:
@@ -58,7 +54,7 @@ async def animate_spaceship(canvas, frames_of_spaceship):
     column_position = window_width // 2 - frame_width // 2
 
     for spaceship_frame in cycle(spaceship_animation):
-        coordinates = read_controls(canvas)
+        coordinates = read_controls(canvas, game_config)
         row_direction, column_direction, space_pressed = coordinates
 
         row_position += row_direction
@@ -111,7 +107,7 @@ def draw_frame(canvas, start_row, start_column, text, negative=False):
             canvas.addch(row, column, symbol)
 
 
-def read_controls(canvas):
+def read_controls(canvas, game_config):
     """Read keys pressed and returns tuple with controls state."""
 
     rows_direction = columns_direction = 0
@@ -125,16 +121,16 @@ def read_controls(canvas):
             break
 
         if pressed_key_code == UP_KEY_CODE:
-            rows_direction = -SPACESHIP_SPEED
+            rows_direction = -int(game_config['DEFAULT']['SPACESHIP_SPEED'])
 
         if pressed_key_code == DOWN_KEY_CODE:
-            rows_direction = SPACESHIP_SPEED
+            rows_direction = int(game_config['DEFAULT']['SPACESHIP_SPEED'])
 
         if pressed_key_code == RIGHT_KEY_CODE:
-            columns_direction = SPACESHIP_SPEED
+            columns_direction = int(game_config['DEFAULT']['SPACESHIP_SPEED'])
 
         if pressed_key_code == LEFT_KEY_CODE:
-            columns_direction = -SPACESHIP_SPEED
+            columns_direction = -int(game_config['DEFAULT']['SPACESHIP_SPEED'])
 
         if pressed_key_code == SPACE_KEY_CODE:
             space_pressed = True
@@ -151,7 +147,7 @@ def get_frame_size(text):
     return rows, columns
 
 
-def draw(canvas, frames):
+def draw(canvas, frames, game_config):
     canvas.border()
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
@@ -172,10 +168,10 @@ def draw(canvas, frames):
         row=random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
         column=random.randint(star_min_coordinate_by_x, star_max_coordinate_by_x),
         offset_tics=random.randint(0, 20),
-        symbol=random.choice(VARIANTS_OF_STARS)
-    ) for star in range(COUNTS_OF_STARS)]
+        symbol=random.choice(game_config['DEFAULT']['VARIANTS_OF_STARS'])
+    ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))]
 
-    spaceship_coroutine = animate_spaceship(canvas, frames)
+    spaceship_coroutine = animate_spaceship(canvas, frames, game_config)
     coroutines.append(spaceship_coroutine)
 
     while True:
@@ -189,6 +185,8 @@ def draw(canvas, frames):
 
 
 def main():
+    game_config = configparser.ConfigParser()
+    game_config.read('config.ini')
     spaceship_frames = []
 
     for frame in range(1, 3):
@@ -197,7 +195,13 @@ def main():
         spaceship_frames.append(''.join(spaceship_frame))
 
     curses.update_lines_cols()
-    curses.wrapper(draw, spaceship_frames)
+    curses.wrapper(
+        partial(
+            draw,
+            game_config=game_config
+        ),
+        spaceship_frames
+    )
 
 
 if __name__ == '__main__':
