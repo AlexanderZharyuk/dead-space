@@ -8,6 +8,8 @@ import configparser
 from itertools import cycle, repeat
 from functools import partial
 
+from physics import update_speed
+
 
 SPACE_KEY_CODE = 32
 LEFT_KEY_CODE = 260
@@ -71,13 +73,16 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
     # Стартовые позиции - изначально это центр игрового поля
     row_position = window_height // 2 - frame_height // 2
     column_position = window_width // 2 - frame_width // 2
+    row_speed = column_speed = 0
 
     for spaceship_frame in cycle(spaceship_animation):
         coordinates = read_controls(canvas, game_config)
-        row_direction, column_direction, space_pressed = coordinates
+        row_speed, column_speed = update_speed(
+            row_speed, column_speed, coordinates[0], coordinates[1]
+        )
 
-        row_position += row_direction
-        column_position += column_direction
+        row_position += row_speed
+        column_position += column_speed
 
         row_position = min(
             window_height - frame_height - border_size,
