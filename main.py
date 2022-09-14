@@ -23,6 +23,19 @@ async def sleep(tics=1):
         await asyncio.sleep(0)
 
 
+async def fire(canvas, column, row, speed=0.5):
+    rows_number, columns_number = canvas.getmaxyx()
+    fire_frame = "|"
+    column = max(column, 0)
+    column = min(column, columns_number - 1)
+
+    while row < rows_number:
+        draw_frame(canvas, row, column, fire_frame)
+        await asyncio.sleep(0)
+        draw_frame(canvas, row, column, fire_frame, negative=True)
+        row -= speed
+
+
 async def blink(canvas, row, column, offset_tics, symbol='*'):
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
@@ -77,6 +90,13 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
 
     for spaceship_frame in cycle(spaceship_animation):
         coordinates = read_controls(canvas, game_config)
+        row_direction, column_direction, space_pressed = coordinates
+        if space_pressed:
+            coroutines.append(fire(
+                canvas=canvas,
+                column=column_position + 2,
+                row=row_position
+            ))
         row_speed, column_speed = update_speed(
             row_speed, column_speed, coordinates[0], coordinates[1]
         )
@@ -215,7 +235,7 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
         canvas=canvas,
         garbage_frames=garbage_frames,
         window_width=window_width,
-        offset_tics=random.randint(0, 20)
+        offset_tics=random.randint(4, 20)
     )
     coroutines.append(spaceship_coroutine)
     coroutines.append(garbage_coroutine)
