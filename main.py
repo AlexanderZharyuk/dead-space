@@ -16,23 +16,24 @@ UP_KEY_CODE = 259
 DOWN_KEY_CODE = 258
 
 
+async def sleep(tics=1):
+    for _ in range(tics):
+        await asyncio.sleep(0)
+
+
 async def blink(canvas, row, column, offset_tics, symbol='*'):
     while True:
         canvas.addstr(row, column, symbol, curses.A_DIM)
-        for _ in range(offset_tics):
-            await asyncio.sleep(0)
+        await sleep(offset_tics)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(3):
-            await asyncio.sleep(0)
+        await sleep(3)
 
         canvas.addstr(row, column, symbol, curses.A_BOLD)
-        for _ in range(5):
-            await asyncio.sleep(0)
+        await sleep(5)
 
         canvas.addstr(row, column, symbol)
-        for _ in range(3):
-            await asyncio.sleep(0)
+        await sleep(3)
 
 
 async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
@@ -108,8 +109,7 @@ async def fill_orbit_with_garbage(canvas, offset_tics, garbage_frames, window_wi
                                           garbage_frame_size))
         coroutines.append(trash_coroutine)
 
-        for _ in range(offset_tics):
-            await asyncio.sleep(0)
+        await sleep(offset_tics)
 
 
 def draw_frame(canvas, start_row, start_column, text, negative=False):
