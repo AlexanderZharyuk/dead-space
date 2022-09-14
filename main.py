@@ -35,6 +35,22 @@ async def blink(canvas, row, column, offset_tics, symbol='*'):
             await asyncio.sleep(0)
 
 
+async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
+    """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
+    rows_number, columns_number = canvas.getmaxyx()
+
+    column = max(column, 0)
+    column = min(column, columns_number - 1)
+
+    row = 0
+
+    while row < rows_number:
+        draw_frame(canvas, row, column, garbage_frame)
+        await asyncio.sleep(0)
+        draw_frame(canvas, row, column, garbage_frame, negative=True)
+        row += speed
+
+
 async def animate_spaceship(canvas, frames_of_spaceship, game_config):
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
@@ -149,7 +165,7 @@ def get_frame_size(text):
     return rows, columns
 
 
-def draw(canvas, frames, game_config):
+def draw(canvas, spaceship_frames, garbage_frames, game_config):
     canvas.border()
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
@@ -173,7 +189,16 @@ def draw(canvas, frames, game_config):
         symbol=random.choice(game_config['DEFAULT']['VARIANTS_OF_STARS'])
     ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))]
 
-    spaceship_coroutine = animate_spaceship(canvas, frames, game_config)
+    spaceship_coroutine = animate_spaceship(canvas, spaceship_frames, game_config)
+    garbage_frame_size = 5
+    for frame in garbage_frames:
+        trash_coroutine = fly_garbage(
+            canvas,
+            garbage_frame=frame,
+            column=random.randint(garbage_frame_size, window_width -
+                                  garbage_frame_size)
+        )
+        coroutines.append(trash_coroutine)
     coroutines.append(spaceship_coroutine)
 
     while True:
@@ -190,19 +215,25 @@ def main():
     game_config = configparser.ConfigParser()
     game_config.read('config.ini')
     spaceship_frames = []
+    garbage_frames = []
 
-    for rocket_frame_file in os.listdir("frames"):
-        with open(f"frames/{rocket_frame_file}", 'r') as rocket_frame:
-            spaceship_frame = rocket_frame.readlines()
-        spaceship_frames.append(''.join(spaceship_frame))
+    for frame_file in os.listdir("frames"):
+        with open(f"frames/{frame_file}", 'r') as frame:
+            frame = frame.readlines()
+
+        if frame_file.startswith("rocket"):
+            spaceship_frames.append(''.join(frame))
+            continue
+        garbage_frames.append(''.join(frame))
 
     curses.update_lines_cols()
     curses.wrapper(
         partial(
             draw,
-            game_config=game_config
-        ),
-        spaceship_frames
+            game_config=game_config,
+            spaceship_frames=spaceship_frames,
+            garbage_frames=garbage_frames
+        )
     )
 
 
