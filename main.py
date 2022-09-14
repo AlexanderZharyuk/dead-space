@@ -97,6 +97,21 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
                    negative=True)
 
 
+async def fill_orbit_with_garbage(canvas, offset_tics, garbage_frames, window_width):
+    garbage_frame_size = 10
+    while True:
+        frame = random.choice(garbage_frames)
+        trash_coroutine = fly_garbage(
+                    canvas,
+                    garbage_frame=frame,
+                    column=random.randint(garbage_frame_size, window_width -
+                                          garbage_frame_size))
+        coroutines.append(trash_coroutine)
+
+        for _ in range(offset_tics):
+            await asyncio.sleep(0)
+
+
 def draw_frame(canvas, start_row, start_column, text, negative=False):
     """Draw multiline text fragment on canvas, erase text instead of drawing if negative=True is specified."""
 
@@ -181,6 +196,7 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
     window.nodelay(True)
     curses.curs_set(False)
 
+    global coroutines
     coroutines = [blink(
         canvas=canvas,
         row=random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
@@ -190,16 +206,14 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
     ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))]
 
     spaceship_coroutine = animate_spaceship(canvas, spaceship_frames, game_config)
-    garbage_frame_size = 5
-    for frame in garbage_frames:
-        trash_coroutine = fly_garbage(
-            canvas,
-            garbage_frame=frame,
-            column=random.randint(garbage_frame_size, window_width -
-                                  garbage_frame_size)
-        )
-        coroutines.append(trash_coroutine)
+    garbage_coroutine = fill_orbit_with_garbage(
+        canvas=canvas,
+        garbage_frames=garbage_frames,
+        window_width=window_width,
+        offset_tics=random.randint(0, 20)
+    )
     coroutines.append(spaceship_coroutine)
+    coroutines.append(garbage_coroutine)
 
     while True:
         for coroutine in coroutines.copy():
