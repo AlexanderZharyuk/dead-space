@@ -24,6 +24,21 @@ async def sleep(tics=1):
         await asyncio.sleep(0)
 
 
+async def show_gameover(canvas, center_row, center_column):
+    with open("frames/game_over.txt", 'r') as file:
+        game_over_frame = file.read()
+
+    rows, columns = get_frame_size(game_over_frame)
+    corner_row = center_row - rows / 2
+    corner_column = center_column - columns / 2
+
+    while True:
+        draw_frame(canvas, corner_row, corner_column, game_over_frame)
+        await asyncio.sleep(0)
+        draw_frame(canvas, corner_row, corner_column, game_over_frame,
+                   negative=True)
+
+
 async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0):
     """Display animation of gun shot. Direction and speed can be specified."""
 
@@ -151,6 +166,16 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
         row_position = max(1, row_position)
         column_position = max(1, column_position)
 
+        collision_with_spaceship = [
+            obstacle for obstacle in obstacles
+            if obstacle.has_collision(
+                row_position, column_position, frame_size[0], frame_size[1]
+            )
+        ]
+        if collision_with_spaceship:
+            center_row, center_column = window_height // 2, window_width // 2
+            await show_gameover(canvas, center_row, center_column)
+
         previous_frame = spaceship_frame
         draw_frame(canvas, row_position, column_position, previous_frame)
 
@@ -171,6 +196,7 @@ async def fill_orbit_with_garbage(canvas, offset_tics, garbage_frames, window_wi
         coroutines.append(trash_coroutine)
 
         await sleep(offset_tics)
+
 
 
 def draw(canvas, spaceship_frames, garbage_frames, game_config):
@@ -230,8 +256,9 @@ def main():
 
         if frame_file.startswith("rocket"):
             spaceship_frames.append(''.join(frame))
-            continue
-        garbage_frames.append(''.join(frame))
+
+        if frame_file.startswith("trash"):
+            garbage_frames.append(''.join(frame))
 
     curses.update_lines_cols()
     curses.wrapper(
