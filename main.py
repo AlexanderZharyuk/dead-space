@@ -11,6 +11,7 @@ from functools import partial
 from physics import update_speed
 from curses_tools import draw_frame, read_controls, get_frame_size
 from obstacles import Obstacle
+from exlposion import explode
 
 
 obstacles = []
@@ -96,6 +97,7 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
 
         if obstacle in obstacles_in_last_collisions:
             obstacles_in_last_collisions.remove(obstacle)
+            await explode(canvas, row + 5, column + 5)
             break
 
     obstacles.remove(obstacle)
