@@ -10,7 +10,12 @@ from functools import partial
 
 from physics import update_speed
 from curses_tools import draw_frame, read_controls, get_frame_size
-from obstacles import Obstacle, show_obstacles
+from obstacles import Obstacle
+
+
+obstacles = []
+coroutines = []
+obstacles_in_last_collisions = []
 
 
 async def sleep(tics=1):
@@ -42,6 +47,12 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0
     curses.beep()
 
     while 0 < row < max_row and 0 < column < max_column:
+        collisions = [obstacles_in_last_collisions.append(obstacle) for
+                      obstacle in obstacles
+                      if obstacle.has_collision(row, column)]
+        if collisions:
+            return
+
         canvas.addstr(round(row), round(column), symbol)
         await asyncio.sleep(0)
         canvas.addstr(round(row), round(column), ' ')
@@ -82,6 +93,10 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
         await asyncio.sleep(0)
         draw_frame(canvas, row, column, garbage_frame, negative=True)
         row += speed
+
+        if obstacle in obstacles_in_last_collisions:
+            obstacles_in_last_collisions.remove(obstacle)
+            break
 
     obstacles.remove(obstacle)
 
@@ -172,17 +187,13 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
     window.nodelay(True)
     curses.curs_set(False)
 
-    global coroutines
-    coroutines = [blink(
+    coroutines.extend([blink(
         canvas=canvas,
         row=random.randint(star_min_coordinate_by_y, star_max_coordinate_by_y),
         column=random.randint(star_min_coordinate_by_x, star_max_coordinate_by_x),
         offset_tics=random.randint(0, 20),
         symbol=random.choice(game_config['DEFAULT']['VARIANTS_OF_STARS'])
-    ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))]
-
-    global obstacles
-    obstacles = []
+    ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))])
 
     spaceship_coroutine = animate_spaceship(canvas, spaceship_frames, game_config)
     garbage_coroutine = fill_orbit_with_garbage(
@@ -191,11 +202,9 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
         window_width=window_width,
         offset_tics=random.randint(4, 20)
     )
-    obstacles_coroutine = show_obstacles(canvas, obstacles)
 
     coroutines.append(spaceship_coroutine)
     coroutines.append(garbage_coroutine)
-    coroutines.append(obstacles_coroutine)
 
     while True:
         for coroutine in coroutines.copy():
