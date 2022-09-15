@@ -9,13 +9,8 @@ from itertools import cycle, repeat
 from functools import partial
 
 from physics import update_speed
-
-
-SPACE_KEY_CODE = 32
-LEFT_KEY_CODE = 260
-RIGHT_KEY_CODE = 261
-UP_KEY_CODE = 259
-DOWN_KEY_CODE = 258
+from curses_tools import draw_frame, read_controls, get_frame_size
+from obstacles import Obstacle, show_obstacles
 
 
 async def sleep(tics=1):
@@ -23,17 +18,35 @@ async def sleep(tics=1):
         await asyncio.sleep(0)
 
 
-async def fire(canvas, column, row, speed=0.5):
-    rows_number, columns_number = canvas.getmaxyx()
-    fire_frame = "|"
-    column = max(column, 0)
-    column = min(column, columns_number - 1)
+async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0):
+    """Display animation of gun shot. Direction and speed can be specified."""
 
-    while row < rows_number:
-        draw_frame(canvas, row, column, fire_frame)
+    row, column = start_row, start_column
+
+    canvas.addstr(round(row), round(column), '*')
+    await asyncio.sleep(0)
+
+    canvas.addstr(round(row), round(column), 'O')
+    await asyncio.sleep(0)
+
+    canvas.addstr(round(row), round(column), ' ')
+
+    row += rows_speed
+    column += columns_speed
+
+    symbol = '-' if columns_speed else '|'
+
+    rows, columns = canvas.getmaxyx()
+    max_row, max_column = rows - 1, columns - 1
+
+    curses.beep()
+
+    while 0 < row < max_row and 0 < column < max_column:
+        canvas.addstr(round(row), round(column), symbol)
         await asyncio.sleep(0)
-        draw_frame(canvas, row, column, fire_frame, negative=True)
-        row -= speed
+        canvas.addstr(round(row), round(column), ' ')
+        row += rows_speed
+        column += columns_speed
 
 
 async def blink(canvas, row, column, offset_tics, symbol='*'):
@@ -59,12 +72,18 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
     column = min(column, columns_number - 1)
 
     row = 0
+    frame_height, frame_width = get_frame_size(garbage_frame)
+    obstacle = Obstacle(row, column, frame_height, frame_width)
+    obstacles.append(obstacle)
 
     while row < rows_number:
         draw_frame(canvas, row, column, garbage_frame)
+        obstacle.row, obstacle.column = row, column
         await asyncio.sleep(0)
         draw_frame(canvas, row, column, garbage_frame, negative=True)
         row += speed
+
+    obstacles.remove(obstacle)
 
 
 async def animate_spaceship(canvas, frames_of_spaceship, game_config):
@@ -94,8 +113,8 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
         if space_pressed:
             coroutines.append(fire(
                 canvas=canvas,
-                column=column_position + 2,
-                row=row_position
+                start_column=column_position + 2,
+                start_row=row_position
             ))
         row_speed, column_speed = update_speed(
             row_speed, column_speed, coordinates[0], coordinates[1]
@@ -137,74 +156,6 @@ async def fill_orbit_with_garbage(canvas, offset_tics, garbage_frames, window_wi
         await sleep(offset_tics)
 
 
-def draw_frame(canvas, start_row, start_column, text, negative=False):
-    """Draw multiline text fragment on canvas, erase text instead of drawing if negative=True is specified."""
-
-    rows_number, columns_number = canvas.getmaxyx()
-    for row, line in enumerate(text.splitlines(), round(start_row)):
-        if row < 0:
-            continue
-
-        if row >= rows_number:
-            break
-
-        for column, symbol in enumerate(line, round(start_column)):
-            if column < 0:
-                continue
-
-            if column >= columns_number:
-                break
-
-            if symbol == ' ':
-                continue
-
-            if row == rows_number - 1 and column == columns_number - 1:
-                continue
-
-            symbol = symbol if not negative else ' '
-            canvas.addch(row, column, symbol)
-
-
-def read_controls(canvas, game_config):
-    """Read keys pressed and returns tuple with controls state."""
-
-    rows_direction = columns_direction = 0
-    space_pressed = False
-
-    while True:
-        pressed_key_code = canvas.getch()
-
-        if pressed_key_code == -1:
-            # https://docs.python.org/3/library/curses.html#curses.window.getch
-            break
-
-        if pressed_key_code == UP_KEY_CODE:
-            rows_direction = -int(game_config['DEFAULT']['SPACESHIP_SPEED'])
-
-        if pressed_key_code == DOWN_KEY_CODE:
-            rows_direction = int(game_config['DEFAULT']['SPACESHIP_SPEED'])
-
-        if pressed_key_code == RIGHT_KEY_CODE:
-            columns_direction = int(game_config['DEFAULT']['SPACESHIP_SPEED'])
-
-        if pressed_key_code == LEFT_KEY_CODE:
-            columns_direction = -int(game_config['DEFAULT']['SPACESHIP_SPEED'])
-
-        if pressed_key_code == SPACE_KEY_CODE:
-            space_pressed = True
-
-    return rows_direction, columns_direction, space_pressed
-
-
-def get_frame_size(text):
-    """Calculate size of multiline text fragment, return pair — number of rows and colums."""
-
-    lines = text.splitlines()
-    rows = len(lines)
-    columns = max([len(line) for line in lines])
-    return rows, columns
-
-
 def draw(canvas, spaceship_frames, garbage_frames, game_config):
     canvas.border()
     window = curses.initscr()
@@ -230,6 +181,9 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
         symbol=random.choice(game_config['DEFAULT']['VARIANTS_OF_STARS'])
     ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))]
 
+    global obstacles
+    obstacles = []
+
     spaceship_coroutine = animate_spaceship(canvas, spaceship_frames, game_config)
     garbage_coroutine = fill_orbit_with_garbage(
         canvas=canvas,
@@ -237,8 +191,11 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
         window_width=window_width,
         offset_tics=random.randint(4, 20)
     )
+    obstacles_coroutine = show_obstacles(canvas, obstacles)
+
     coroutines.append(spaceship_coroutine)
     coroutines.append(garbage_coroutine)
+    coroutines.append(obstacles_coroutine)
 
     while True:
         for coroutine in coroutines.copy():
