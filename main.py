@@ -19,6 +19,10 @@ OBSTACLES = []
 COROUTINES = []
 OBSTACLES_IN_LAST_COLLISIONS = []
 YEAR = 1957
+YEAR_TICS = 15
+
+with open("frames/game_over.txt", 'r') as file:
+    GAME_OVER_FRAME = file.read()
 
 
 async def sleep(tics=1):
@@ -28,10 +32,9 @@ async def sleep(tics=1):
 
 async def change_year():
     global YEAR
-    year_tics = int(1.5 / 0.1)
 
     while True:
-        for _ in range(year_tics):
+        for _ in range(YEAR_TICS):
             await asyncio.sleep(0)
         YEAR += 1
 
@@ -45,18 +48,20 @@ async def show_year(canvas):
 
 
 async def show_gameover(canvas, center_row, center_column):
-    with open("frames/game_over.txt", 'r') as file:
-        game_over_frame = file.read()
-
-    rows, columns = get_frame_size(game_over_frame)
+    rows, columns = get_frame_size(GAME_OVER_FRAME)
     corner_row = center_row - rows / 2
     corner_column = center_column - columns / 2
 
     while True:
-        draw_frame(canvas, corner_row, corner_column, game_over_frame)
+        draw_frame(canvas, corner_row, corner_column, GAME_OVER_FRAME)
         await asyncio.sleep(0)
-        draw_frame(canvas, corner_row, corner_column, game_over_frame,
-                   negative=True)
+        draw_frame(
+            canvas,
+            corner_row,
+            corner_column,
+            GAME_OVER_FRAME,
+            negative=True
+        )
 
 
 async def blink(canvas, row, column, offset_tics, symbol='*'):
@@ -75,7 +80,10 @@ async def blink(canvas, row, column, offset_tics, symbol='*'):
 
 
 async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
-    """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
+    """
+    Animate garbage, flying from top to bottom.
+    Сolumn position will stay same, as specified on start.
+    """
     rows_number, columns_number = canvas.getmaxyx()
 
     column = max(column, 0)
@@ -101,17 +109,21 @@ async def fly_garbage(canvas, column, garbage_frame, speed=0.5):
     OBSTACLES.remove(obstacle)
 
 
-async def fill_orbit_with_garbage(canvas, offset_tics, garbage_frames, window_width):
+async def fill_orbit_with_garbage(canvas, garbage_frames, window_width):
     garbage_frame_size = 10
     while True:
         tics = get_garbage_delay_tics(YEAR)
         if tics:
             frame = random.choice(garbage_frames)
+            max_width = window_width - garbage_frame_size
             trash_coroutine = fly_garbage(
                         canvas,
                         garbage_frame=frame,
-                        column=random.randint(garbage_frame_size, window_width -
-                                              garbage_frame_size))
+                        column=random.randint(
+                            garbage_frame_size,
+                            max_width
+                        )
+            )
             COROUTINES.append(trash_coroutine)
 
         await sleep(tics or 1)
@@ -168,7 +180,10 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
         collision_with_spaceship = [
             obstacle for obstacle in OBSTACLES
             if obstacle.has_collision(
-                row_position, column_position, frame_size[0], frame_size[1]
+                row_position,
+                column_position,
+                frame_size[0],
+                frame_size[1]
             )
         ]
         if collision_with_spaceship:
@@ -179,8 +194,13 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
         draw_frame(canvas, row_position, column_position, previous_frame)
 
         await asyncio.sleep(0)
-        draw_frame(canvas, row_position, column_position, spaceship_frame,
-                   negative=True)
+        draw_frame(
+            canvas,
+            row_position,
+            column_position,
+            spaceship_frame,
+            negative=True
+        )
 
 
 async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0):
@@ -207,9 +227,10 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0
     curses.beep()
 
     while 0 < row < max_row and 0 < column < max_column:
-        collisions = [OBSTACLES_IN_LAST_COLLISIONS.append(obstacle) for
-                      obstacle in OBSTACLES
-                      if obstacle.has_collision(row, column)]
+        collisions = [
+            OBSTACLES_IN_LAST_COLLISIONS.append(obstacle) for obstacle
+            in OBSTACLES if obstacle.has_collision(row, column)
+        ]
         if collisions:
             return
 
@@ -251,12 +272,15 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
         symbol=random.choice(game_config['DEFAULT']['VARIANTS_OF_STARS'])
     ) for star in range(int(game_config['DEFAULT']['COUNTS_OF_STARS']))])
 
-    spaceship_coroutine = animate_spaceship(canvas, spaceship_frames, game_config)
+    spaceship_coroutine = animate_spaceship(
+        canvas,
+        spaceship_frames,
+        game_config
+    )
     garbage_coroutine = fill_orbit_with_garbage(
         canvas=canvas,
         garbage_frames=garbage_frames,
-        window_width=window_width,
-        offset_tics=random.randint(4, 20)
+        window_width=window_width
     )
 
     COROUTINES.append(spaceship_coroutine)
