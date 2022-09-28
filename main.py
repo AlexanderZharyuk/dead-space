@@ -21,9 +21,6 @@ OBSTACLES_IN_LAST_COLLISIONS = []
 YEAR = 1957
 YEAR_TICS = 15
 
-with open("frames/game_over.txt", 'r') as file:
-    GAME_OVER_FRAME = file.read()
-
 
 async def sleep(tics=1):
     for _ in range(tics):
@@ -47,19 +44,19 @@ async def show_year(canvas):
         draw_frame(canvas, 0, 0, printed_year, negative=True)
 
 
-async def show_gameover(canvas, center_row, center_column):
-    rows, columns = get_frame_size(GAME_OVER_FRAME)
+async def show_gameover(canvas, center_row, center_column, game_over_frame):
+    rows, columns = get_frame_size(game_over_frame)
     corner_row = center_row - rows / 2
     corner_column = center_column - columns / 2
 
     while True:
-        draw_frame(canvas, corner_row, corner_column, GAME_OVER_FRAME)
+        draw_frame(canvas, corner_row, corner_column, game_over_frame)
         await asyncio.sleep(0)
         draw_frame(
             canvas,
             corner_row,
             corner_column,
-            GAME_OVER_FRAME,
+            game_over_frame,
             negative=True
         )
 
@@ -129,7 +126,11 @@ async def fill_orbit_with_garbage(canvas, garbage_frames, window_width):
         await sleep(tics or 1)
 
 
-async def animate_spaceship(canvas, frames_of_spaceship, game_config):
+async def animate_spaceship(
+        canvas,
+        frames_of_spaceship,
+        game_config,
+        game_over_frame):
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
     # Подробнее в документации:
@@ -188,7 +189,12 @@ async def animate_spaceship(canvas, frames_of_spaceship, game_config):
         ]
         if collision_with_spaceship:
             center_row, center_column = window_height // 2, window_width // 2
-            await show_gameover(canvas, center_row, center_column)
+            await show_gameover(
+                canvas,
+                center_row,
+                center_column,
+                game_over_frame
+            )
 
         previous_frame = spaceship_frame
         draw_frame(canvas, row_position, column_position, previous_frame)
@@ -241,7 +247,11 @@ async def fire(canvas, start_row, start_column, rows_speed=-0.6, columns_speed=0
         column += columns_speed
 
 
-def draw(canvas, spaceship_frames, garbage_frames, game_config):
+def draw(canvas,
+         spaceship_frames,
+         garbage_frames,
+         game_config,
+         game_over_frame):
     canvas.border()
     window = curses.initscr()
     # Метод getmaxyx возвращает кортеж высоты и ширины окна
@@ -275,7 +285,8 @@ def draw(canvas, spaceship_frames, garbage_frames, game_config):
     spaceship_coroutine = animate_spaceship(
         canvas,
         spaceship_frames,
-        game_config
+        game_config,
+        game_over_frame
     )
     garbage_coroutine = fill_orbit_with_garbage(
         canvas=canvas,
@@ -305,6 +316,8 @@ def main():
     game_config.read('config.ini')
     spaceship_frames = []
     garbage_frames = []
+    with open("frames/game_over.txt", 'r') as file:
+        game_over_frame = file.read()
 
     for frame_file in os.listdir("frames"):
         with open(f"frames/{frame_file}", 'r') as frame:
@@ -322,7 +335,8 @@ def main():
             draw,
             game_config=game_config,
             spaceship_frames=spaceship_frames,
-            garbage_frames=garbage_frames
+            garbage_frames=garbage_frames,
+            game_over_frame=game_over_frame
         )
     )
 
